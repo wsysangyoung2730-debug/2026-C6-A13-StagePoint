@@ -16,10 +16,20 @@ final class StageSession: ObservableObject {
     @Published var isDetecting = false
     @Published var frozenFrame: UIImage?
     @Published var message = "무대 바닥의 A·B·C·D를 확인하세요."
-    @Published var target: Point2D?
+    @Published var targets: [StageTarget] = []
+    @Published var selectedTargetID: UUID?
+    @Published var sourceTemplateName: String?
     @Published var selectedCorner = 0
     private var detectionID = UUID()
     var stageSize: StageSize { .init(width: Double(widthText) ?? 0, depth: Double(depthText) ?? 0) }
+    var selectedTarget: StageTarget? { targets.first(where: { $0.id == selectedTargetID }) ?? targets.first }
+    var target: Point2D? { selectedTarget?.normalized }
+
+    func load(_ template: StageTemplate) {
+        targets = template.targets; selectedTargetID = targets.first?.id; sourceTemplateName = template.name
+        mode = mapping == nil ? .mapping : .points
+        message = mapping == nil ? "표준 목표를 불러왔습니다. 실제 무대를 매핑하세요." : "표준 무대의 목표를 같은 비율로 배치했습니다."
+    }
 
     func invalidate(_ reason: String = "기준점이 변경됐습니다. 매핑을 다시 적용하세요.") {
         mapping = nil; message = reason
@@ -66,6 +76,13 @@ final class StageSession: ObservableObject {
         guard let point = mapping?.stagePoint(from: imagePoint), point.isUnitPoint else {
             message = "매핑된 무대 안쪽을 선택하세요."; return
         }
-        target = point; message = "목표 A를 지정했습니다."
+        if let index = targets.firstIndex(where: { $0.id == selectedTarget?.id }) {
+            targets[index].normalized = point
+        } else {
+            let target = StageTarget(name: "목표 A", normalized: point)
+            targets = [target]; selectedTargetID = target.id
+        }
+        sourceTemplateName = nil
+        message = "\(selectedTarget?.name ?? "목표")를 지정했습니다."
     }
 }

@@ -51,11 +51,13 @@ struct StageCanvas: View {
                             .accessibilityIdentifier("corner-\(index)")
                     }
                 }
-                if let target = model.target, let p = model.mapping?.imagePoint(from: target) {
-                    ZStack {
-                        Image(systemName: "scope").font(.system(size: 28)).foregroundStyle(.yellow)
-                        Text("목표 A").font(.caption.bold()).padding(5).background(.black.opacity(0.75), in: Capsule()).offset(y: -28)
-                    }.position(p.screen(in: rect)).allowsHitTesting(false)
+                ForEach(model.targets) { target in
+                    if let p = model.mapping?.imagePoint(from: target.normalized) {
+                        ZStack {
+                            Image(systemName: "scope").font(.system(size: 28)).foregroundStyle(target.id == model.selectedTarget?.id ? .yellow : .cyan)
+                            Text(target.name).font(.caption.bold()).padding(5).background(.black.opacity(0.75), in: Capsule()).offset(y: -28)
+                        }.position(p.screen(in: rect)).allowsHitTesting(false)
+                    }
                 }
                 VStack {
                     HStack { Label(model.frozenFrame == nil ? "LIVE" : "정지 화면", systemImage: model.frozenFrame == nil ? "circle.fill" : "pause.fill").font(.caption.bold()); Spacer() }
