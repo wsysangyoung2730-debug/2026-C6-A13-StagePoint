@@ -1,0 +1,15 @@
+name: StagePoint 검증
+on:
+  pull_request:
+    branches: [develop, main]
+  push:
+    branches: [develop, main]
+jobs:
+  build:
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v4
+      - name: 좌표 계산 단위 테스트
+        run: swift test --package-path Packages/StagePointCore
+      - name: iOS 시뮬레이터 빌드
+        run: xcodebuild -project StagePoint.xcodeproj -scheme StagePoint -sdk iphonesimulator -destination 'generic/platform=iOS Simulator' CODE_SIGNING_ALLOWED=NO build
