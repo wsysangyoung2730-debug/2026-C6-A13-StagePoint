@@ -59,6 +59,10 @@ struct StageCanvas: View {
                         }.position(p.screen(in: rect)).allowsHitTesting(false)
                     }
                 }
+                if model.mode == .measure, let probe = model.probe, let p = model.mapping?.imagePoint(from: probe) {
+                    Image(systemName: "plus.viewfinder").font(.system(size: 30)).foregroundStyle(.white)
+                        .position(p.screen(in: rect)).allowsHitTesting(false)
+                }
                 VStack {
                     HStack { Label(model.frozenFrame == nil ? "LIVE" : "정지 화면", systemImage: model.frozenFrame == nil ? "circle.fill" : "pause.fill").font(.caption.bold()); Spacer() }
                     Spacer()

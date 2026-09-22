@@ -5,6 +5,7 @@ struct ContentView: View {
     @StateObject private var camera = CameraController()
     @StateObject private var model = StageSession()
     @StateObject private var templates = TemplateStore()
+    @StateObject private var measurements = MeasurementStore()
     @State private var showTemplates = false
     @Environment(\.scenePhase) private var scenePhase
     @State private var demo = ProcessInfo.processInfo.arguments.contains("--demo")
@@ -18,7 +19,9 @@ struct ContentView: View {
                 StageCanvas(model: model, image: model.frozenFrame ?? currentFrame)
                 ScrollView {
                     VStack(alignment: .leading, spacing: 14) {
-                        if model.mode == .mapping { mappingPanel } else { pointPanel }
+                        if model.mode == .mapping { mappingPanel }
+                        else if model.mode == .measure { MeasurementPanel(model: model, store: measurements, isDemo: demo) }
+                        else { pointPanel }
                     }.padding(16)
                 }.frame(width: 245).background(.white.opacity(0.055), in: RoundedRectangle(cornerRadius: 16))
             }
@@ -55,7 +58,7 @@ struct ContentView: View {
             Image(systemName: "viewfinder").foregroundStyle(.cyan).font(.title3)
             Text("StagePoint").font(.system(size: 21, weight: .bold, design: .rounded))
             Divider().frame(height: 20)
-            ForEach([WorkspaceMode.mapping, .points], id: \.self) { mode in
+            ForEach(WorkspaceMode.allCases, id: \.self) { mode in
                 Button(mode.rawValue) { model.mode = mode }.buttonStyle(.bordered)
                     .tint(model.mode == mode ? .cyan : .gray)
                     .disabled(mode != .mapping && model.mapping == nil)
@@ -133,6 +136,7 @@ struct ContentView: View {
             Text(title).font(.subheadline)
             TextField(title, text: text).keyboardType(.decimalPad).textFieldStyle(.roundedBorder).monospacedDigit()
                 .onChange(of: text.wrappedValue) { _, _ in model.invalidate("무대 치수가 변경됐습니다. 다시 적용하세요.") }
+                .accessibilityIdentifier(title == "가로" ? "actual-width" : "actual-depth")
             Text("m").foregroundStyle(.secondary)
         }
     }
