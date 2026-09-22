@@ -31,9 +31,6 @@ enum DemoStage {
                 ctx.move(to: CGPoint(x: p.x - 10, y: p.y)); ctx.addLine(to: CGPoint(x: p.x + 10, y: p.y))
                 ctx.move(to: CGPoint(x: p.x, y: p.y - 10)); ctx.addLine(to: CGPoint(x: p.x, y: p.y + 10)); ctx.strokePath()
             }
-            ("DEMO · 가상 연습실" as NSString).draw(at: CGPoint(x: 36, y: 28), withAttributes: [
-                .font: UIFont.systemFont(ofSize: 24, weight: .semibold), .foregroundColor: UIColor.lightGray
-            ])
         }
     }
 }

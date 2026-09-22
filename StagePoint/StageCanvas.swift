@@ -76,11 +76,11 @@ struct StageCanvas: View {
                 model.tap(.init(x: (location.x - rect.minX) / rect.width, y: (location.y - rect.minY) / rect.height))
             }
             .clipShape(RoundedRectangle(cornerRadius: 16))
+        }.accessibilityElement(children: .contain)
             .accessibilityIdentifier("stage-canvas")
-        }
     }
     private func fittedRect(image: CGSize, in size: CGSize) -> CGRect {
-        let scale = min(size.width / image.width, size.height / image.height)
+        let scale = min(max(1, size.width - 44) / image.width, max(1, size.height - 44) / image.height)
         let fitted = CGSize(width: image.width * scale, height: image.height * scale)
         return CGRect(x: (size.width - fitted.width) / 2, y: (size.height - fitted.height) / 2, width: fitted.width, height: fitted.height)
     }

@@ -68,12 +68,16 @@ struct TemplateEditor: View {
                             .font(.caption).foregroundStyle(.secondary)
                         if let storeError = store.error { Text(storeError).font(.caption).foregroundStyle(.orange) }
                     }.padding(.trailing, 4)
-                }.frame(width: 255)
+                }.frame(width: 255).accessibilityIdentifier("template-inspector")
             }.padding(18)
                 .background(Color(red: 0.055, green: 0.07, blue: 0.09))
                 .navigationTitle("표준 무대")
                 .navigationBarTitleDisplayMode(.inline)
                 .toolbar {
+                    ToolbarItemGroup(placement: .keyboard) {
+                        Spacer()
+                        Button("입력 완료") { UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil) }
+                    }
                     ToolbarItem(placement: .cancellationAction) { Button("닫기") { dismiss() } }
                     ToolbarItemGroup(placement: .primaryAction) {
                         Button("가져오기", systemImage: "square.and.arrow.down") { importing = true }
