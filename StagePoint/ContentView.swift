@@ -4,6 +4,8 @@ import StagePointCore
 struct ContentView: View {
     @StateObject private var camera = CameraController()
     @StateObject private var model = StageSession()
+    @StateObject private var templates = TemplateStore()
+    @State private var showTemplates = false
     @Environment(\.scenePhase) private var scenePhase
     @State private var demo = ProcessInfo.processInfo.arguments.contains("--demo")
     @State private var sample = DemoStage.image()
@@ -29,6 +31,9 @@ struct ContentView: View {
         .padding(.horizontal, 12).padding(.vertical, 8)
         .background(Color(red: 0.055, green: 0.07, blue: 0.09))
         .tint(.cyan)
+        .fullScreenCover(isPresented: $showTemplates) {
+            TemplateEditor(store: templates) { model.load($0) }.tint(.cyan)
+        }
         .task {
             #if targetEnvironment(simulator)
             demo = true
@@ -56,6 +61,8 @@ struct ContentView: View {
                     .disabled(mode != .mapping && model.mapping == nil)
             }
             Spacer(minLength: 0)
+            Button("표준 무대", systemImage: "square.grid.3x3") { showTemplates = true }
+                .buttonStyle(.bordered).accessibilityIdentifier("open-templates")
             Button(demo ? "카메라" : "데모") {
                 demo.toggle(); model.manual(frame: demo ? sample : nil)
                 if demo { camera.stop(); model.detect(sample) } else { camera.start() }
@@ -97,12 +104,20 @@ struct ContentView: View {
     }
     private var pointPanel: some View {
         Group {
-            Text("목표 A").font(.headline)
+            Text(model.selectedTarget?.name ?? "목표 지정").font(.headline)
+            if let name = model.sourceTemplateName { Text("표준: \(name)").font(.caption).foregroundStyle(.cyan) }
+            StagePlanView(size: model.stageSize, targets: model.targets, selectedID: model.selectedTarget?.id)
+                .frame(height: 110)
+            if model.targets.count > 1 {
+                Menu("목표 선택") {
+                    ForEach(model.targets) { target in Button(target.name) { model.selectedTargetID = target.id } }
+                }
+            }
             Text("카메라 화면의 바닥을 누르세요.").font(.caption).foregroundStyle(.secondary)
             if let target = model.target {
                 let meters = model.stageSize.meters(from: target)
-                Text("X  \(meters.x, specifier: "%.2f") m").monospacedDigit()
-                Text("Y  \(meters.y, specifier: "%.2f") m").monospacedDigit()
+                Text("X  \(meters.x, specifier: "%.2f") m").monospacedDigit().accessibilityIdentifier("actual-target-x")
+                Text("Y  \(meters.y, specifier: "%.2f") m").monospacedDigit().accessibilityIdentifier("actual-target-y")
                 Text("비율 \(target.x * 100, specifier: "%.1f")% · \(target.y * 100, specifier: "%.1f")%")
                     .font(.caption).foregroundStyle(.secondary)
             }
