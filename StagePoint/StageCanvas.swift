@@ -59,6 +59,10 @@ struct StageCanvas: View {
                         }.position(p.screen(in: rect)).allowsHitTesting(false)
                     }
                 }
+                if model.mode == .measure, let probe = model.probe, let p = model.mapping?.imagePoint(from: probe) {
+                    Image(systemName: "plus.viewfinder").font(.system(size: 30)).foregroundStyle(.white)
+                        .position(p.screen(in: rect)).allowsHitTesting(false)
+                }
                 VStack {
                     HStack { Label(model.frozenFrame == nil ? "LIVE" : "정지 화면", systemImage: model.frozenFrame == nil ? "circle.fill" : "pause.fill").font(.caption.bold()); Spacer() }
                     Spacer()
@@ -72,11 +76,11 @@ struct StageCanvas: View {
                 model.tap(.init(x: (location.x - rect.minX) / rect.width, y: (location.y - rect.minY) / rect.height))
             }
             .clipShape(RoundedRectangle(cornerRadius: 16))
+        }.accessibilityElement(children: .contain)
             .accessibilityIdentifier("stage-canvas")
-        }
     }
     private func fittedRect(image: CGSize, in size: CGSize) -> CGRect {
-        let scale = min(size.width / image.width, size.height / image.height)
+        let scale = min(max(1, size.width - 44) / image.width, max(1, size.height - 44) / image.height)
         let fitted = CGSize(width: image.width * scale, height: image.height * scale)
         return CGRect(x: (size.width - fitted.width) / 2, y: (size.height - fitted.height) / 2, width: fitted.width, height: fitted.height)
     }

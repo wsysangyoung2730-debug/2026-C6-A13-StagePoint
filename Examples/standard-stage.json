@@ -1,0 +1,13 @@
+{
+  "version": 1,
+  "id": "19D10A62-91CA-4ACF-9EB6-42F29E302ABD",
+  "name": "예제 표준 무대 6 × 4",
+  "referenceSize": { "width": 6, "depth": 4 },
+  "targets": [
+    {
+      "id": "E78FD727-D423-43CE-8D23-7A3195F21850",
+      "name": "목표 A",
+      "normalized": { "x": 0.3333333333333333, "y": 0.75 }
+    }
+  ]
+}

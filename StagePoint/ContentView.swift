@@ -5,7 +5,9 @@ struct ContentView: View {
     @StateObject private var camera = CameraController()
     @StateObject private var model = StageSession()
     @StateObject private var templates = TemplateStore()
+    @StateObject private var measurements = MeasurementStore()
     @State private var showTemplates = false
+    @State private var keyboardVisible = false
     @Environment(\.scenePhase) private var scenePhase
     @State private var demo = ProcessInfo.processInfo.arguments.contains("--demo")
     @State private var sample = DemoStage.image()
@@ -16,10 +18,20 @@ struct ContentView: View {
             header
             HStack(alignment: .top, spacing: 12) {
                 StageCanvas(model: model, image: model.frozenFrame ?? currentFrame)
-                ScrollView {
-                    VStack(alignment: .leading, spacing: 14) {
-                        if model.mode == .mapping { mappingPanel } else { pointPanel }
-                    }.padding(16)
+                VStack(spacing: 6) {
+                    ScrollView {
+                        VStack(alignment: .leading, spacing: 12) {
+                            if model.mode == .mapping { mappingPanel }
+                            else if model.mode == .measure { MeasurementPanel(model: model, store: measurements, isDemo: demo) }
+                            else { pointPanel }
+                        }.padding(14)
+                    }.accessibilityIdentifier("inspector")
+                    if model.mode == .mapping {
+                        Button("매핑 적용") { model.apply() }
+                            .buttonStyle(.borderedProminent).controlSize(.large)
+                            .disabled(!model.quad.isValid || !model.stageSize.isValid || model.isDetecting || currentFrame == nil)
+                            .accessibilityIdentifier("apply-mapping").padding(.bottom, 10)
+                    }
                 }.frame(width: 245).background(.white.opacity(0.055), in: RoundedRectangle(cornerRadius: 16))
             }
             HStack {
@@ -31,6 +43,8 @@ struct ContentView: View {
         .padding(.horizontal, 12).padding(.vertical, 8)
         .background(Color(red: 0.055, green: 0.07, blue: 0.09))
         .tint(.cyan)
+        .onReceive(NotificationCenter.default.publisher(for: UIResponder.keyboardWillShowNotification)) { _ in keyboardVisible = true }
+        .onReceive(NotificationCenter.default.publisher(for: UIResponder.keyboardWillHideNotification)) { _ in keyboardVisible = false }
         .fullScreenCover(isPresented: $showTemplates) {
             TemplateEditor(store: templates) { model.load($0) }.tint(.cyan)
         }
@@ -51,18 +65,22 @@ struct ContentView: View {
         }
     }
     private var header: some View {
-        HStack(spacing: 14) {
+        HStack(spacing: 10) {
             Image(systemName: "viewfinder").foregroundStyle(.cyan).font(.title3)
-            Text("StagePoint").font(.system(size: 21, weight: .bold, design: .rounded))
+            Text("StagePoint").font(.system(size: 19, weight: .bold, design: .rounded))
             Divider().frame(height: 20)
-            ForEach([WorkspaceMode.mapping, .points], id: \.self) { mode in
+            ForEach(WorkspaceMode.allCases, id: \.self) { mode in
                 Button(mode.rawValue) { model.mode = mode }.buttonStyle(.bordered)
                     .tint(model.mode == mode ? .cyan : .gray)
                     .disabled(mode != .mapping && model.mapping == nil)
             }
             Spacer(minLength: 0)
+            if keyboardVisible {
+                Button("완료") { UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil) }
+                    .accessibilityIdentifier("dismiss-keyboard")
+            }
             Button("표준 무대", systemImage: "square.grid.3x3") { showTemplates = true }
-                .buttonStyle(.bordered).accessibilityIdentifier("open-templates")
+                .buttonStyle(.bordered).labelStyle(.titleOnly).fixedSize().accessibilityIdentifier("open-templates")
             Button(demo ? "카메라" : "데모") {
                 demo.toggle(); model.manual(frame: demo ? sample : nil)
                 if demo { camera.stop(); model.detect(sample) } else { camera.start() }
@@ -70,7 +88,7 @@ struct ContentView: View {
             if camera.unavailable && !demo {
                 Button("설정") { if let url = URL(string: UIApplication.openSettingsURLString) { UIApplication.shared.open(url) } }
             }
-        }
+        }.font(.system(size: 13)).controlSize(.small)
     }
     private var mappingPanel: some View {
         Group {
@@ -95,11 +113,14 @@ struct ContentView: View {
                 .font(.caption).foregroundStyle(.secondary)
             dimensionField("가로", text: $model.widthText)
             dimensionField("세로", text: $model.depthText)
+            HStack(spacing: 10) {
+                Text("\(["A", "B", "C", "D"][model.selectedCorner]) 미세조정").font(.caption)
+                ForEach(0..<4, id: \.self) { direction in
+                    Button { nudge(direction) } label: { Image(systemName: ["arrow.left", "arrow.right", "arrow.up", "arrow.down"][direction]) }
+                        .accessibilityLabel("선택한 기준점 \(["왼쪽", "오른쪽", "위", "아래"][direction]) 이동")
+                }
+            }
             Button("앞쪽 A·B 전환", systemImage: "arrow.triangle.2.circlepath") { model.flipFront() }.font(.caption)
-            Button("매핑 적용") { model.apply() }
-                .buttonStyle(.borderedProminent).controlSize(.large).frame(maxWidth: .infinity)
-                .disabled(!model.quad.isValid || !model.stageSize.isValid || model.isDetecting || currentFrame == nil)
-                .accessibilityIdentifier("apply-mapping")
         }
     }
     private var pointPanel: some View {
@@ -133,7 +154,14 @@ struct ContentView: View {
             Text(title).font(.subheadline)
             TextField(title, text: text).keyboardType(.decimalPad).textFieldStyle(.roundedBorder).monospacedDigit()
                 .onChange(of: text.wrappedValue) { _, _ in model.invalidate("무대 치수가 변경됐습니다. 다시 적용하세요.") }
+                .accessibilityIdentifier(title == "가로" ? "actual-width" : "actual-depth")
             Text("m").foregroundStyle(.secondary)
         }
+    }
+    private func nudge(_ direction: Int) {
+        let p = model.quad.corners[model.selectedCorner]
+        let dx = [-0.002, 0.002, 0, 0][direction]
+        let dy = [0, 0, -0.002, 0.002][direction]
+        model.moveCorner(model.selectedCorner, to: .init(x: p.x + dx, y: p.y + dy))
     }
 }

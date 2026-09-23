@@ -44,8 +44,8 @@ struct StagePlanView: View {
             .contentShape(Rectangle())
             .onTapGesture { location in
                 guard rect.contains(location) else { return }
-                onTap?(.init(x: (location.x - rect.minX) / rect.width, y: 1 - (location.y - rect.minY) / rect.height))
+                onTap?(.init(x: Double((location.x - rect.minX) / rect.width), y: 1.0 - Double((location.y - rect.minY) / rect.height)))
             }
-        }
+        }.accessibilityElement(children: .contain)
     }
 }

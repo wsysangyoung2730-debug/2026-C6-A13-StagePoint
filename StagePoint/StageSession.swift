@@ -9,6 +9,8 @@ final class StageSession: ObservableObject {
     @Published var mode: WorkspaceMode = .mapping
     @Published var quad = StageQuad.manual
     @Published var mapping: StageMapping?
+    @Published var calibrationID: UUID?
+    @Published var probe: Point2D?
     @Published var widthText = "6.0"
     @Published var depthText = "4.0"
     @Published var proposals: [RectangleProposal] = []
@@ -32,7 +34,7 @@ final class StageSession: ObservableObject {
     }
 
     func invalidate(_ reason: String = "기준점이 변경됐습니다. 매핑을 다시 적용하세요.") {
-        mapping = nil; message = reason
+        mapping = nil; calibrationID = nil; probe = nil; message = reason
     }
     func detect(_ frame: UIImage) {
         let requestID = UUID(); detectionID = requestID
@@ -69,12 +71,15 @@ final class StageSession: ObservableObject {
     func apply() {
         guard stageSize.isValid, stageSize.width <= 100, stageSize.depth <= 100,
               let mapping = StageMapping(quad: quad) else { message = "치수(0 초과~100m)와 교차하지 않는 네 점을 확인하세요."; return }
-        self.mapping = mapping; mode = .points
+        self.mapping = mapping; calibrationID = UUID(); probe = nil; mode = .points
         message = "매핑 적용됨 · 화면의 바닥을 눌러 목표점을 지정하세요."
     }
     func tap(_ imagePoint: Point2D) {
         guard let point = mapping?.stagePoint(from: imagePoint), point.isUnitPoint else {
             message = "매핑된 무대 안쪽을 선택하세요."; return
+        }
+        if mode == .measure {
+            probe = point; message = "검증점을 선택했습니다. 실측 좌표를 입력하세요."; return
         }
         if let index = targets.firstIndex(where: { $0.id == selectedTarget?.id }) {
             targets[index].normalized = point
