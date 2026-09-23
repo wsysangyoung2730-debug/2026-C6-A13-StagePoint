@@ -50,7 +50,21 @@ struct MeasurementPanel: View {
         return .init(x: x, y: y)
     }
     private var calculated: Point2D? { model.probe.map { model.stageSize.meters(from: $0) } }
+    private var summary: MeasurementSummary? {
+        guard let id = model.calibrationID else { return nil }
+        return MeasurementSummary(measurements: store.records, calibrationID: id)
+    }
     var body: some View {
+        panelContent
+            .fileExporter(isPresented: $exporting, document: MeasurementDocument(records: store.records), contentType: .json, defaultFilename: "StagePoint-measurements") { result in
+                if case .failure(let failure) = result { error = failure.localizedDescription }
+            }
+            .sheet(isPresented: $showHistory) { history }
+            .alert("측정 확인", isPresented: Binding(get: { error != nil }, set: { if !$0 { error = nil } })) {
+                Button("확인", role: .cancel) { error = nil }
+            } message: { Text(error ?? "") }
+    }
+    private var panelContent: some View {
         VStack(alignment: .leading, spacing: 12) {
             Text("독립 검증점").font(.headline)
             Text("기준점으로 쓰지 않은 바닥 표식을 누르고 줄자로 잰 좌표를 입력하세요.")
@@ -59,19 +73,11 @@ struct MeasurementPanel: View {
                 TextField("실제 X m", text: $xText).accessibilityIdentifier("measurement-x")
                 TextField("실제 Y m", text: $yText).accessibilityIdentifier("measurement-y")
             }.keyboardType(.decimalPad).textFieldStyle(.roundedBorder)
-            if let calculated {
-                Text("계산 (\(calculated.x, specifier: "%.2f"), \(calculated.y, specifier: "%.2f")) m")
-                    .font(.caption).monospacedDigit()
-                if let actual {
-                    Text("\(actual.distance(to: calculated) * 100, specifier: "%.1f") cm")
-                        .font(.system(size: 29, weight: .semibold, design: .rounded)).foregroundStyle(.yellow)
-                        .accessibilityIdentifier("measurement-error")
-                }
-            } else { Text("화면에서 검증점을 선택하세요.").font(.caption).foregroundStyle(.orange) }
+            calculatedResult
             Button("측정 저장") { save() }.buttonStyle(.borderedProminent)
                 .disabled(actual == nil || calculated == nil || model.mapping == nil)
                 .accessibilityIdentifier("save-measurement")
-            if let id = model.calibrationID, let summary = MeasurementSummary(measurements: store.records, calibrationID: id) {
+            if let summary {
                 Text("현재 매핑 · \(summary.count)회").font(.caption.bold()).accessibilityIdentifier("measurement-count")
                 Text("평균 \(summary.meanCentimeters, specifier: "%.1f") / 최대 \(summary.maximumCentimeters, specifier: "%.1f") cm")
                     .font(.caption).foregroundStyle(.secondary)
@@ -83,27 +89,30 @@ struct MeasurementPanel: View {
             if isDemo { Text("데모 좌표 · 실제 정확도 아님").font(.caption).foregroundStyle(.orange) }
             if let error = store.error { Text(error).font(.caption).foregroundStyle(.orange) }
         }
-        .fileExporter(isPresented: $exporting, document: MeasurementDocument(records: store.records), contentType: .json, defaultFilename: "StagePoint-measurements") { result in
-            if case .failure(let failure) = result { error = failure.localizedDescription }
-        }
-        .sheet(isPresented: $showHistory) {
-            NavigationStack {
-                List(store.records.reversed()) { record in
-                    VStack(alignment: .leading) {
-                        HStack {
-                            Text(record.date, style: .time)
-                            Text(record.isDemo ? "DEMO" : "카메라").foregroundStyle(record.isDemo ? .orange : .cyan)
-                            Spacer(); Text("\(record.errorMeters * 100, specifier: "%.1f") cm")
-                        }
-                        Text("무대 \(record.stageSize.width, specifier: "%g") × \(record.stageSize.depth, specifier: "%g") m · 매핑 \(record.calibrationID.uuidString.prefix(6))")
-                            .font(.caption).foregroundStyle(.secondary)
-                    }
-                }.navigationTitle("측정 기록").toolbar { Button("닫기") { showHistory = false } }
+    }
+    @ViewBuilder
+    private var calculatedResult: some View {
+        if let calculated {
+            Text("계산 (\(calculated.x, specifier: "%.2f"), \(calculated.y, specifier: "%.2f")) m")
+                .font(.caption).monospacedDigit()
+            if let actual {
+                let centimeters: Double = actual.distance(to: calculated) * 100.0
+                Text("\(centimeters, specifier: "%.1f") cm")
+                    .font(.system(size: 29, weight: .semibold, design: .rounded)).foregroundStyle(.yellow)
+                    .accessibilityIdentifier("measurement-error")
             }
+        } else {
+            Text("화면에서 검증점을 선택하세요.").font(.caption).foregroundStyle(.orange)
         }
-        .alert("측정 확인", isPresented: Binding(get: { error != nil }, set: { if !$0 { error = nil } })) {
-            Button("확인", role: .cancel) { error = nil }
-        } message: { Text(error ?? "") }
+    }
+    private var history: some View {
+        NavigationStack {
+            List(store.records.reversed()) { record in
+                MeasurementHistoryRow(record: record)
+            }
+            .navigationTitle("측정 기록")
+            .toolbar { Button("닫기") { showHistory = false } }
+        }
     }
     private func save() {
         guard let id = model.calibrationID, model.mapping != nil, let actual, let calculated else { return }
@@ -113,5 +122,23 @@ struct MeasurementPanel: View {
                                               deviceDescription: "\(UIDevice.current.model) · iOS \(UIDevice.current.systemVersion) · rear wide 1x")
             try store.append(record); model.probe = nil; model.message = "측정을 저장했습니다. 다음 검증점을 선택하세요."
         } catch { self.error = error.localizedDescription }
+    }
+}
+
+private struct MeasurementHistoryRow: View {
+    let record: StageMeasurement
+    private var centimeters: Double { record.errorMeters * 100.0 }
+    var body: some View {
+        VStack(alignment: .leading) {
+            HStack {
+                Text(record.date, style: .time)
+                Text(record.isDemo ? "DEMO" : "카메라")
+                    .foregroundStyle(record.isDemo ? Color.orange : Color.cyan)
+                Spacer()
+                Text("\(centimeters, specifier: "%.1f") cm")
+            }
+            Text("무대 \(record.stageSize.width, specifier: "%g") × \(record.stageSize.depth, specifier: "%g") m · 매핑 \(record.calibrationID.uuidString.prefix(6))")
+                .font(.caption).foregroundStyle(.secondary)
+        }
     }
 }
