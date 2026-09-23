@@ -137,7 +137,7 @@ private struct MeasurementHistoryRow: View {
                 Spacer()
                 Text("\(centimeters, specifier: "%.1f") cm")
             }
-            Text("무대 \(record.stageSize.width, specifier: "%g") × \(record.stageSize.depth, specifier: "%g") m · 매핑 \(record.calibrationID.uuidString.prefix(6))")
+            Text("무대 \(record.stageSize.width, specifier: "%g") × \(record.stageSize.depth, specifier: "%g") m · 매핑 \(String(record.calibrationID.uuidString.prefix(6)))")
                 .font(.caption).foregroundStyle(.secondary)
         }
     }
