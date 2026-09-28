@@ -6,6 +6,7 @@ extension Point2D {
 }
 
 struct StageCanvas: View {
+    @Environment(\.workspaceLayout) private var layout
     @ObservedObject var model: StageSession
     let image: UIImage?
     var body: some View {
@@ -38,11 +39,11 @@ struct StageCanvas: View {
                 }.allowsHitTesting(false)
                 if model.mode == .mapping {
                     ForEach(0..<4, id: \.self) { index in
-                        Text(["A", "B", "C", "D"][index]).font(.system(size: 15, weight: .bold, design: .rounded))
-                            .foregroundStyle(.black).frame(width: 34, height: 34)
+                        Text(["A", "B", "C", "D"][index]).font(.system(size: layout.isExpanded ? 20 : 15, weight: .bold, design: .rounded))
+                            .foregroundStyle(.black).frame(width: layout.cornerDiameter, height: layout.cornerDiameter)
                             .background(model.selectedCorner == index ? .white : .cyan, in: Circle())
                             .overlay(Circle().stroke(.black.opacity(0.5), lineWidth: 2))
-                            .frame(width: 52, height: 52).contentShape(Circle())
+                            .frame(width: layout.cornerTouchSize, height: layout.cornerTouchSize).contentShape(Circle())
                             .position(model.quad.corners[index].screen(in: rect))
                             .gesture(DragGesture(minimumDistance: 0, coordinateSpace: .named("stageCanvas")).onChanged { event in
                                 model.moveCorner(index, to: .init(x: (event.location.x - rect.minX) / rect.width, y: (event.location.y - rect.minY) / rect.height))
@@ -54,7 +55,7 @@ struct StageCanvas: View {
                 ForEach(model.targets) { target in
                     if let p = model.mapping?.imagePoint(from: target.normalized) {
                         ZStack {
-                            Image(systemName: "scope").font(.system(size: 28)).foregroundStyle(target.id == model.selectedTarget?.id ? .yellow : .cyan)
+                            Image(systemName: "scope").font(.system(size: layout.isExpanded ? 38 : 28)).foregroundStyle(target.id == model.selectedTarget?.id ? .yellow : .cyan)
                             Text(target.name).font(.caption.bold()).padding(5).background(.black.opacity(0.75), in: Capsule()).offset(y: -28)
                         }.position(p.screen(in: rect)).allowsHitTesting(false)
                     }
@@ -80,7 +81,8 @@ struct StageCanvas: View {
             .accessibilityIdentifier("stage-canvas")
     }
     private func fittedRect(image: CGSize, in size: CGSize) -> CGRect {
-        let scale = min(max(1, size.width - 44) / image.width, max(1, size.height - 44) / image.height)
+        let inset = layout.cornerTouchSize + 12
+        let scale = min(max(1, size.width - inset) / image.width, max(1, size.height - inset) / image.height)
         let fitted = CGSize(width: image.width * scale, height: image.height * scale)
         return CGRect(x: (size.width - fitted.width) / 2, y: (size.height - fitted.height) / 2, width: fitted.width, height: fitted.height)
     }

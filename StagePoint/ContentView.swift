@@ -14,33 +14,11 @@ struct ContentView: View {
     private var currentFrame: UIImage? { demo ? sample : camera.frame }
 
     var body: some View {
-        VStack(spacing: 10) {
-            header
-            HStack(alignment: .top, spacing: 12) {
-                StageCanvas(model: model, image: model.frozenFrame ?? currentFrame)
-                VStack(spacing: 6) {
-                    ScrollView {
-                        VStack(alignment: .leading, spacing: 12) {
-                            if model.mode == .mapping { mappingPanel }
-                            else if model.mode == .measure { MeasurementPanel(model: model, store: measurements, isDemo: demo) }
-                            else { pointPanel }
-                        }.padding(14)
-                    }.accessibilityIdentifier("inspector")
-                    if model.mode == .mapping {
-                        Button("매핑 적용") { model.apply() }
-                            .buttonStyle(.borderedProminent).controlSize(.large)
-                            .disabled(!model.quad.isValid || !model.stageSize.isValid || model.isDetecting || currentFrame == nil)
-                            .accessibilityIdentifier("apply-mapping").padding(.bottom, 10)
-                    }
-                }.frame(width: 245).background(.white.opacity(0.055), in: RoundedRectangle(cornerRadius: 16))
-            }
-            HStack {
-                Label(demo ? "데모 · 실제 측정 아님" : camera.message, systemImage: demo ? "testtube.2" : "camera")
-                Spacer()
-                Text("원점 A · 관객 기준 앞쪽 왼쪽").foregroundStyle(.secondary)
-            }.font(.system(size: 11))
+        GeometryReader { geometry in
+            let layout = WorkspaceLayout(width: geometry.size.width)
+            workspace(layout)
+                .environment(\.workspaceLayout, layout)
         }
-        .padding(.horizontal, 12).padding(.vertical, 8)
         .background(Color(red: 0.055, green: 0.07, blue: 0.09))
         .tint(.cyan)
         .onReceive(NotificationCenter.default.publisher(for: UIResponder.keyboardWillShowNotification)) { _ in keyboardVisible = true }
@@ -64,10 +42,41 @@ struct ContentView: View {
             } else if !demo { camera.start() }
         }
     }
-    private var header: some View {
-        HStack(spacing: 10) {
+    private func workspace(_ layout: WorkspaceLayout) -> some View {
+        VStack(spacing: layout.isExpanded ? 16 : 10) {
+            header(layout)
+            HStack(alignment: .top, spacing: layout.spacing) {
+                StageCanvas(model: model, image: model.frozenFrame ?? currentFrame)
+                VStack(spacing: 6) {
+                    ScrollView {
+                        VStack(alignment: .leading, spacing: 12) {
+                            if model.mode == .mapping { mappingPanel }
+                            else if model.mode == .measure { MeasurementPanel(model: model, store: measurements, isDemo: demo) }
+                            else { pointPanel(layout) }
+                        }.padding(layout.isExpanded ? 20 : 14)
+                    }.accessibilityIdentifier("inspector")
+                    if model.mode == .mapping {
+                        Button("매핑 적용") { model.apply() }
+                            .buttonStyle(.borderedProminent).controlSize(.large)
+                            .disabled(!model.quad.isValid || !model.stageSize.isValid || model.isDetecting || currentFrame == nil)
+                            .accessibilityIdentifier("apply-mapping").padding(.bottom, 10)
+                    }
+                }.frame(width: layout.panelWidth)
+                    .background(.white.opacity(0.055), in: RoundedRectangle(cornerRadius: 16))
+            }
+            HStack {
+                Label(demo ? "데모 · 실제 측정 아님" : camera.message, systemImage: demo ? "testtube.2" : "camera")
+                Spacer()
+                Text("원점 A · 관객 기준 앞쪽 왼쪽").foregroundStyle(.secondary)
+            }.font(.system(size: layout.isExpanded ? 13 : 11))
+        }
+        .padding(.horizontal, layout.padding).padding(.vertical, layout.isExpanded ? 16 : 8)
+        .controlSize(layout.isExpanded ? .large : .regular)
+    }
+    private func header(_ layout: WorkspaceLayout) -> some View {
+        HStack(spacing: layout.isExpanded ? 14 : 10) {
             Image(systemName: "viewfinder").foregroundStyle(.cyan).font(.title3)
-            Text("StagePoint").font(.system(size: 19, weight: .bold, design: .rounded))
+            Text("StagePoint").font(.system(size: layout.isExpanded ? 26 : 19, weight: .bold, design: .rounded))
             Divider().frame(height: 20)
             ForEach(WorkspaceMode.allCases, id: \.self) { mode in
                 Button(mode.rawValue) { model.mode = mode }.buttonStyle(.bordered)
@@ -88,7 +97,8 @@ struct ContentView: View {
             if camera.unavailable && !demo {
                 Button("설정") { if let url = URL(string: UIApplication.openSettingsURLString) { UIApplication.shared.open(url) } }
             }
-        }.font(.system(size: 13)).controlSize(.small)
+        }.font(.system(size: layout.isExpanded ? 16 : 13))
+            .controlSize(layout.isExpanded ? .regular : .small)
     }
     private var mappingPanel: some View {
         Group {
@@ -123,12 +133,12 @@ struct ContentView: View {
             Button("앞쪽 A·B 전환", systemImage: "arrow.triangle.2.circlepath") { model.flipFront() }.font(.caption)
         }
     }
-    private var pointPanel: some View {
+    private func pointPanel(_ layout: WorkspaceLayout) -> some View {
         Group {
             Text(model.selectedTarget?.name ?? "목표 지정").font(.headline)
             if let name = model.sourceTemplateName { Text("표준: \(name)").font(.caption).foregroundStyle(.cyan) }
             StagePlanView(size: model.stageSize, targets: model.targets, selectedID: model.selectedTarget?.id)
-                .frame(height: 110)
+                .frame(height: layout.minimapHeight)
             if model.targets.count > 1 {
                 Menu("목표 선택") {
                     ForEach(model.targets) { target in Button(target.name) { model.selectedTargetID = target.id } }
