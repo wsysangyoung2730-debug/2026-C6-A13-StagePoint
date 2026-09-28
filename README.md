@@ -12,9 +12,9 @@
 - `StagePoint.xcodeproj`를 열고 `StagePoint` 스킴을 실행합니다.
 - 실제 iPhone 실행 시 Signing & Capabilities에서 본인의 Development Team을 선택합니다.
 
-## iPad 로컬 확장
+## iPad 확장
 
-최신 원격 `develop`의 `dae8e4a`에서 만든 로컬 브랜치 `feat/#5-iPadSupport`에서 작업합니다. `#5`는 기존 1~4번 작업을 잇는 로컬 작업 번호입니다. 이번 작업은 GitHub 이슈·PR·원격 푸시 없이 진행합니다.
+원격 `develop`의 `dae8e4a`에서 만든 `feat/#5-iPadSupport` 브랜치에서 작업했습니다. `#5`는 기존 1~4번 작업을 잇는 로컬 작업 번호이며, 실제 GitHub 작업 이슈는 [#10](https://github.com/wsysangyoung2730-debug/2026-C6-A13-StagePoint/issues/10)입니다. 로컬 구현·검증 후 원격에 푸시하고 `develop` 대상 PR로 통합합니다.
 
 - Xcode 실행 대상에서 연결한 iPad 또는 iPad 시뮬레이터를 선택합니다. 실제 기기는 Development Team 서명이 필요합니다.
 - 아이폰 호환 화면을 확대하는 방식이 아니라 iPad를 지원 기기로 포함한 공용 앱입니다.
@@ -165,7 +165,7 @@ xcodebuild -project StagePoint.xcodeproj -scheme StagePoint \
 - iPad mini (A17 Pro), iPadOS 26.5: UI 테스트 4개 항목 통과. 첫 실행의 측정 테스트는 시뮬레이터 background assertion 시간 초과로 중단되어, 같은 코드로 해당 항목을 재실행해 통과했습니다.
 - iPhone 17 Pro, iOS 26.5: 기존 기능 및 화면 배치 UI 테스트 4개 통과.
 - 추가한 화면 검증은 가로 전체 화면, 무대 영역 크기, 패널 겹침, 손잡이 잘림, 주요 버튼 접근, 표준 무대 편집 영역을 확인합니다. 데모 화면 캡처를 시각적으로도 확인했습니다.
-- 로컬 작업으로 진행했으며, 이 브랜치의 GitHub CI와 실제 iPad 카메라 검증은 실행하지 않았습니다.
+- 위 결과는 로컬 검증 기록입니다. 이후 원격 CI 및 통합 결과는 [이슈 #10](https://github.com/wsysangyoung2730-debug/2026-C6-A13-StagePoint/issues/10)에서 확인합니다. 실제 iPad 카메라 검증은 수행하지 않았습니다.
 
 ### 최초 버전
 
