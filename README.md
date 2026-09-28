@@ -14,7 +14,7 @@
 
 ## iPad 로컬 확장
 
-최신 원격 `develop`의 `dae8e4a`에서 만든 로컬 브랜치 `feat/ipad-support`에서 작업합니다. 이번 작업은 GitHub 이슈·PR·원격 푸시 없이 진행하므로 브랜치에 이슈 번호를 붙이지 않았습니다.
+최신 원격 `develop`의 `dae8e4a`에서 만든 로컬 브랜치 `feat/#5-iPadSupport`에서 작업합니다. `#5`는 기존 1~4번 작업을 잇는 로컬 작업 번호입니다. 이번 작업은 GitHub 이슈·PR·원격 푸시 없이 진행합니다.
 
 - Xcode 실행 대상에서 연결한 iPad 또는 iPad 시뮬레이터를 선택합니다. 실제 기기는 Development Team 서명이 필요합니다.
 - 아이폰 호환 화면을 확대하는 방식이 아니라 iPad를 지원 기기로 포함한 공용 앱입니다.
