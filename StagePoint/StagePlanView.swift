@@ -2,6 +2,7 @@ import SwiftUI
 import StagePointCore
 
 struct StagePlanView: View {
+    @Environment(\.workspaceLayout) private var layout
     let size: StageSize
     let targets: [StageTarget]
     let selectedID: UUID?
@@ -30,13 +31,16 @@ struct StagePlanView: View {
                         context.stroke(path, with: .color(.white.opacity(0.1)), lineWidth: 1)
                     }
                 }.allowsHitTesting(false)
-                Text("무대 뒤쪽").font(.system(size: 10)).foregroundStyle(.secondary).position(x: rect.midX, y: rect.minY - 10)
-                Text("관객 · 앞쪽 A → B").font(.system(size: 10)).foregroundStyle(.secondary).position(x: rect.midX, y: rect.maxY + 11)
+                Text("무대 뒤쪽").font(.system(size: layout.isExpanded ? 12 : 10)).foregroundStyle(.secondary).position(x: rect.midX, y: rect.minY - 10)
+                Text("관객 · 앞쪽 A → B").font(.system(size: layout.isExpanded ? 12 : 10)).foregroundStyle(.secondary).position(x: rect.midX, y: rect.maxY + 11)
                 ForEach(targets) { target in
                     ZStack {
-                        Circle().fill(target.id == selectedID ? .yellow : .cyan).frame(width: 12, height: 12)
-                        Circle().stroke(.yellow.opacity(target.id == selectedID ? 0.4 : 0), lineWidth: 2).frame(width: 22, height: 22)
-                        Text(target.name).font(.system(size: 10, weight: .semibold)).offset(y: -19)
+                        Circle().fill(target.id == selectedID ? .yellow : .cyan)
+                            .frame(width: layout.isExpanded ? 16 : 12, height: layout.isExpanded ? 16 : 12)
+                        Circle().stroke(.yellow.opacity(target.id == selectedID ? 0.4 : 0), lineWidth: 2)
+                            .frame(width: layout.isExpanded ? 28 : 22, height: layout.isExpanded ? 28 : 22)
+                        Text(target.name).font(.system(size: layout.isExpanded ? 12 : 10, weight: .semibold))
+                            .offset(y: layout.isExpanded ? -23 : -19)
                     }.position(x: rect.minX + target.normalized.x * rect.width, y: rect.maxY - target.normalized.y * rect.height)
                         .allowsHitTesting(false)
                 }
