@@ -27,6 +27,37 @@ final class StagePointUITests: XCTestCase {
         let attachment = XCTAttachment(screenshot: XCUIScreen.main.screenshot())
         attachment.name = name; attachment.lifetime = .keepAlways; add(attachment)
     }
+    func testWorkspaceUsesAvailableLandscapeSize() {
+        let app = launch()
+        let canvas = app.otherElements["stage-canvas"]
+        let inspector = app.scrollViews["inspector"]
+        XCTAssertTrue(canvas.exists)
+        XCTAssertGreaterThan(app.frame.width, app.frame.height)
+        XCTAssertGreaterThan(canvas.frame.width, app.frame.width * 0.5)
+        XCTAssertLessThanOrEqual(canvas.frame.maxX, inspector.frame.minX)
+        XCTAssertTrue(app.buttons["apply-mapping"].isHittable)
+        XCTAssertTrue(app.buttons["open-templates"].isHittable)
+        for index in 0..<4 {
+            let corner = app.descendants(matching: .any)["corner-\(index)"]
+            XCTAssertTrue(corner.isHittable)
+            XCTAssertTrue(canvas.frame.contains(corner.frame), "기준점 손잡이가 잘리지 않아야 합니다.")
+        }
+        if app.frame.width >= 1_000 {
+            XCTAssertGreaterThanOrEqual(inspector.frame.width, 300)
+            XCTAssertGreaterThanOrEqual(app.descendants(matching: .any)["corner-0"].frame.width, 64)
+        }
+        screenshot("06-responsive-workspace")
+        app.buttons["open-templates"].tap()
+        let plan = app.otherElements["standard-plan"]
+        XCTAssertTrue(plan.waitForExistence(timeout: 5))
+        XCTAssertGreaterThan(plan.frame.width, app.frame.width * 0.5)
+        XCTAssertTrue(app.buttons["닫기"].isHittable)
+        if app.frame.width >= 1_000 {
+            XCTAssertTrue(app.buttons["save-and-place"].isHittable)
+            XCTAssertGreaterThanOrEqual(app.scrollViews["template-inspector"].frame.width, 300)
+        }
+        screenshot("07-responsive-template")
+    }
     func testRectangleProposalManualAdjustmentAndMapping() {
         let app = launch()
         screenshot("01-rectangle-proposal")
