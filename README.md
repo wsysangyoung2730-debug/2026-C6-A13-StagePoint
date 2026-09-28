@@ -6,11 +6,24 @@
 
 ## 개발 환경
 
-- Swift / SwiftUI, iOS 18 이상, iPhone 가로 화면
+- Swift / SwiftUI, iOS / iPadOS 18 이상, iPhone·iPad 가로 화면
 - Xcode 16 이상 (실제 검증 버전은 아래 검증 기록에 명시)
 - 외부 서버·유료 SDK 없이 기기 내에서 처리
 - `StagePoint.xcodeproj`를 열고 `StagePoint` 스킴을 실행합니다.
 - 실제 iPhone 실행 시 Signing & Capabilities에서 본인의 Development Team을 선택합니다.
+
+## iPad 로컬 확장
+
+최신 원격 `develop`의 `dae8e4a`에서 만든 로컬 브랜치 `feat/ipad-support`에서 작업합니다. 이번 작업은 GitHub 이슈·PR·원격 푸시 없이 진행하므로 브랜치에 이슈 번호를 붙이지 않았습니다.
+
+- Xcode 실행 대상에서 연결한 iPad 또는 iPad 시뮬레이터를 선택합니다. 실제 기기는 Development Team 서명이 필요합니다.
+- 아이폰 호환 화면을 확대하는 방식이 아니라 iPad를 지원 기기로 포함한 공용 앱입니다.
+- 사용 가능한 화면 너비가 1,000pt 이상이면 300~360pt 설정 패널, 큰 평면도와 기준점 손잡이를 사용합니다. 더 좁은 화면에서는 기존의 간결한 배치를 사용합니다.
+- 영상의 종횡비와 영상 바깥 여백을 유지합니다. 터치·기준점·목표 표시는 같은 영상 좌표를 사용하며 무대 크기의 정규화 계산은 바뀌지 않습니다.
+- 이번 범위는 **고정 카메라용 가로 화면(Landscape Right)**입니다. 반대 가로 방향·세로 촬영·완전한 다중 창 지원은 포함하지 않습니다. 촬영 방향을 늘리려면 카메라 프레임 회전과 매핑 무효화도 함께 검증해야 합니다.
+- 기존 `UIRequiresFullScreen` 설정을 유지합니다. 최신 iPadOS의 창 관리 동작에 대해서는 [Apple의 전체 화면 설정 이행 안내](https://developer.apple.com/documentation/technotes/tn3192-migrating-your-app-from-the-deprecated-uirequiresfullscreen-key)를 참고하세요. 모든 창 크기에서의 사용을 보장하는 버전은 아닙니다.
+
+실제 iPad 카메라의 영상 방향·인식률·물리적 위치 오차는 별도 현장 검증이 필요합니다.
 
 ## Git 전략
 
@@ -144,6 +157,17 @@ xcodebuild -project StagePoint.xcodeproj -scheme StagePoint \
 `--demo` 실행 인수는 카메라 대신 합성 무대를 사용합니다. `--uitesting`은 사용자 파일과 분리된 테스트 저장 파일을 사용합니다.
 
 ## 검증 기록
+
+### iPad 확장 — 2026-09-28
+
+- Xcode 26.5: 좌표 계산 단위 테스트 12개, 공용 시뮬레이터 빌드와 실제 기기용 Release 빌드(서명 제외) 통과.
+- iPad Pro 11-inch (M5), iPadOS 26.5: UI 테스트 4개 통과.
+- iPad mini (A17 Pro), iPadOS 26.5: UI 테스트 4개 항목 통과. 첫 실행의 측정 테스트는 시뮬레이터 background assertion 시간 초과로 중단되어, 같은 코드로 해당 항목을 재실행해 통과했습니다.
+- iPhone 17 Pro, iOS 26.5: 기존 기능 및 화면 배치 UI 테스트 4개 통과.
+- 추가한 화면 검증은 가로 전체 화면, 무대 영역 크기, 패널 겹침, 손잡이 잘림, 주요 버튼 접근, 표준 무대 편집 영역을 확인합니다. 데모 화면 캡처를 시각적으로도 확인했습니다.
+- 로컬 작업으로 진행했으며, 이 브랜치의 GitHub CI와 실제 iPad 카메라 검증은 실행하지 않았습니다.
+
+### 최초 버전
 
 2026-09-23 기준:
 
