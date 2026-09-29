@@ -8,3 +8,4 @@ xcuserdata/
 *.xcresult
 .artifacts/
 node_modules/
+.artifacts-*.log

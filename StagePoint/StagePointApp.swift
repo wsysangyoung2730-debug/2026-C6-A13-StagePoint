@@ -7,11 +7,11 @@ struct StagePointApp: App {
         WindowGroup {
             Group {
                 if ProcessInfo.processInfo.arguments.contains("--uitesting") && !ProcessInfo.processInfo.arguments.contains("--live-demo") {
-                    ContentView()
+                    ContentView().preferredColorScheme(.dark)
                 } else {
                     DeviceRoleView()
                 }
-            }.preferredColorScheme(.dark).tint(.cyan)
+            }.preferredColorScheme(.light).tint(.blue)
         }
     }
 }
