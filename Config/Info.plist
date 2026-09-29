@@ -9,7 +9,9 @@
     <key>CFBundleShortVersionString</key><string>$(MARKETING_VERSION)</string>
     <key>CFBundleVersion</key><string>$(CURRENT_PROJECT_VERSION)</string>
     <key>LSRequiresIPhoneOS</key><true/>
-    <key>NSCameraUsageDescription</key><string>무대 바닥을 촬영해 사각형 기준점을 제안하고 목표 위치를 표시합니다.</string>
+    <key>NSCameraUsageDescription</key><string>무대를 스캔하고 기준점과 목표를 표시하며, 연결한 운영 기기에 실시간 무대 영상을 공유합니다.</string>
+    <key>NSLocalNetworkUsageDescription</key><string>같은 네트워크의 촬영 기기와 운영 기기를 연결해 무대 영상과 좌표를 공유합니다.</string>
+    <key>NSAppTransportSecurity</key><dict><key>NSAllowsLocalNetworking</key><true/></dict>
     <key>UIApplicationSceneManifest</key><dict><key>UIApplicationSupportsMultipleScenes</key><false/></dict>
     <key>UILaunchScreen</key><dict/>
     <key>UISupportedInterfaceOrientations</key><array><string>UIInterfaceOrientationLandscapeRight</string></array>
