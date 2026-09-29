@@ -16,6 +16,7 @@ private struct LiveWorkspaceContent: View {
     @ObservedObject var rtc: LiveRTC
     let onExit: () -> Void
     @Environment(\.scenePhase) private var scenePhase
+    @Environment(\.horizontalSizeClass) private var horizontalSizeClass
     @State private var connectionSheet = true
     @State private var calibrationSheet = false
     @State private var now = Date()
@@ -106,15 +107,16 @@ private struct LiveWorkspaceContent: View {
                     ContentUnavailableView(model.snapshot.phase, systemImage: "viewfinder", description: Text("촬영 기기에서 스캔하고 공연 구역을 확정하면 여기에 표시됩니다."))
                 }
             }.frame(maxWidth: .infinity, maxHeight: .infinity).padding().background(Color(.secondarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: 16))
-            VStack(alignment: .leading, spacing: 14) {
+            ScrollView {
+              VStack(alignment: .leading, spacing: 14) {
                 Text("카메라 실시간 영상").font(.headline)
                 video.aspectRatio(16 / 9, contentMode: .fit)
                 Text(model.snapshot.phase).font(.headline)
                 Text("보정 완료 후 평면도를 터치하면 목표 A를 촬영 기기에 전달합니다.").font(.subheadline).foregroundStyle(.secondary)
                 if !stateFresh { Text("무대 정보 갱신 대기 · 조작 중지").foregroundStyle(.orange) }
                 Text("공연 불러오기·사람 추적은 2차 범위입니다.").font(.caption).foregroundStyle(.secondary)
-                Spacer()
-            }.frame(width: 300).padding().background(Color(.secondarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: 16))
+              }
+            }.frame(width: horizontalSizeClass == .compact ? 240 : 300).padding().background(Color(.secondarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: 16))
         }
     }
     private var video: some View {
