@@ -1,6 +1,7 @@
 import SwiftUI
 import Combine
 import StagePointCore
+import AVFoundation
 
 @MainActor
 final class LiveSession: ObservableObject {
@@ -31,7 +32,10 @@ final class LiveSession: ObservableObject {
         }
         rtc.$dataReady.removeDuplicates().sink { [weak self] ready in
             guard let self, ready else { return }
-            DispatchQueue.main.async { self.publish() }
+            DispatchQueue.main.async {
+                self.prepareTransportFixture()
+                self.publish()
+            }
         }.store(in: &subscriptions)
         timer = Timer.publish(every: 1, on: .main, in: .common).autoconnect().sink { [weak self] _ in
             guard let self else { return }
@@ -39,7 +43,36 @@ final class LiveSession: ObservableObject {
             if let sent = self.commandSentAt, Date().timeIntervalSince(sent) > 3, self.pendingCommand != nil {
                 self.pendingCommand = nil; self.message = "목표 변경 응답 없음 · 현재 상태를 확인하세요."
             }
+            self.writeTransportDiagnostics()
         }
+    }
+    func startTransportFixture() {
+        guard LiveTestConfiguration.role != nil else { return }
+        rtc.connect(endpoint: "ws://127.0.0.1:18080", room: "sim-transport", token: "simulator-test-only", role: role)
+        message = "시뮬레이터 합성 영상 전송 시험 · 실제 촬영 아님"
+    }
+    private func prepareTransportFixture() {
+        guard LiveTestConfiguration.role == .camera else { return }
+        let stage = LiveStage(size: .init(width: 8, depth: 6), source: "시뮬레이터 시험 데이터", confirmed: true)
+        snapshot.stage = stage
+        var calibration = LiveCalibration(stage: stage, quad: .manual); calibration.validated = true
+        snapshot.calibration = calibration; snapshot.phase = "합성 영상 전송 시험"
+    }
+    private func writeTransportDiagnostics() {
+        #if DEBUG && targetEnvironment(simulator)
+        guard LiveTestConfiguration.role != nil else { return }
+        if role == .monitor, snapshot.canProject, snapshot.target == nil, pendingCommand == nil { setTarget(.init(x: 0.25, y: 0.75)) }
+        let data: [String: Any] = ["role": role.rawValue, "ready": rtc.dataReady, "status": rtc.status,
+            "hasVideoFrame": rtc.lastFrameAt.map { Date().timeIntervalSince($0) < 3 } == true,
+            "snapshotRevision": snapshot.revision, "hasStage": snapshot.stage != nil,
+            "hasTarget": snapshot.target != nil, "pendingCommand": pendingCommand != nil,
+            "phase": snapshot.phase, "canProject": snapshot.canProject, "message": message]
+        let directory = StageScanArchive.url.deletingLastPathComponent()
+        do {
+            try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+            try JSONSerialization.data(withJSONObject: data, options: [.prettyPrinted, .sortedKeys]).write(to: directory.appendingPathComponent("transport-diagnostics.json"), options: .atomic)
+        } catch { message = "전송 시험 기록 실패: \(error.localizedDescription)" }
+        #endif
     }
     func publish() {
         guard role == .camera else { return }
@@ -47,9 +80,22 @@ final class LiveSession: ObservableObject {
         rtc.send(LivePacket(snapshot: snapshot))
     }
     func beginScan() {
+        guard rtc.dataReady else { return }
+        AVCaptureDevice.requestAccess(for: .video) { [weak self] allowed in
+            DispatchQueue.main.async {
+                guard let self else { return }
+                guard allowed, self.rtc.dataReady else { self.message = "카메라 권한과 기기 연결을 확인하세요."; return }
+                self.startScanAfterPermission()
+            }
+        }
+    }
+    private func startScanAfterPermission() {
         snapshot.calibration = nil; snapshot.target = nil; snapshot.stage = nil
         snapshot.phase = "무대 스캔 중"; publish()
-        rtc.stopCamera { [weak self] in self?.showScanner = true }
+        rtc.stopCamera { [weak self] in
+            guard let self, self.rtc.dataReady else { return }
+            self.showScanner = true
+        }
     }
     func scanned(_ result: ScanResult) {
         showScanner = false
@@ -93,7 +139,8 @@ final class LiveSession: ObservableObject {
         }
         if role == .camera, let command = packet.command {
             guard command.sessionID == snapshot.sessionID, command.calibrationID == snapshot.calibration?.id,
-                  snapshot.canProject else { rtc.send(LivePacket(acknowledgedID: command.id, error: "무대 보정 상태가 바뀌었습니다.")); return }
+                  snapshot.canProject, rtc.lastFrameAt.map({ Date().timeIntervalSince($0) < 3 }) == true
+            else { rtc.send(LivePacket(acknowledgedID: command.id, error: "영상 또는 무대 보정 상태를 확인하세요.")); return }
             if !processed.contains(command.id) {
                 snapshot.target = command.target; processed.append(command.id)
                 if processed.count > 128 { processed.removeFirst() }

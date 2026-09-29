@@ -50,12 +50,25 @@ private struct LiveWorkspaceContent: View {
             .fullScreenCover(isPresented: $model.editingStage) {
                 StageBoundsEditor(initial: model.draft?.size ?? .init(width: 8, depth: 6), source: model.draft?.rawRoom == nil ? "수동 입력" : "RoomPlan 측정 제안") { size in model.confirmStage(size) }
             }
-            .sheet(isPresented: $calibrationSheet) {
-                Text("카메라 보정 도구 준비 중").padding()
+            .fullScreenCover(isPresented: $calibrationSheet) {
+                CalibrationEditor(model: model, rtc: rtc)
             }
             .onReceive(clock) { now = $0 }
+            .task {
+                if LiveTestConfiguration.role != nil { connectionSheet = false; model.startTransportFixture() }
+            }
             .onChange(of: scenePhase) { _, phase in
-                if phase == .background { model.invalidate("앱이 중단됐습니다. 재연결 후 다시 보정하세요."); rtc.disconnect() }
+                if phase == .background {
+                    model.showScanner = false; model.editingStage = false; calibrationSheet = false
+                    model.invalidate("앱이 중단됐습니다. 재연결 후 다시 보정하세요."); rtc.disconnect()
+                }
+            }
+            .onChange(of: rtc.videoSize) { previous, current in
+                let oldRatio = previous.width / max(1, previous.height)
+                let newRatio = current.width / max(1, current.height)
+                if model.role == .camera, abs(oldRatio - newRatio) > 0.01, model.snapshot.calibration != nil {
+                    model.invalidate("영상 비율·방향 변경 · 다시 보정하세요.")
+                }
             }
     }
     private var camera: some View {
@@ -68,6 +81,7 @@ private struct LiveWorkspaceContent: View {
                 Button("저장 스캔") { model.restoreScan() }.disabled(!rtc.dataReady && !model.demo)
                 Spacer()
                 Button("촬영 시작") { rtc.startCamera() }.disabled(!rtc.dataReady)
+                Button("카메라 이동됨") { model.invalidate("카메라가 이동했습니다. 다시 보정하세요.") }.disabled(model.snapshot.calibration == nil)
                 Button("기준점 보정") { calibrationSheet = true }.disabled(model.snapshot.stage == nil || !fresh)
                     .accessibilityIdentifier("open-calibration")
             }.buttonStyle(.bordered).font(.caption)
@@ -107,6 +121,12 @@ private struct LiveWorkspaceContent: View {
         ZStack {
             if model.demo { Image(uiImage: DemoStage.image()).resizable().scaledToFit() }
             else { LiveVideoView(track: model.role == .camera ? rtc.localTrack : rtc.remoteTrack) }
+            if fresh && stateFresh && model.snapshot.canProject, let calibration = model.snapshot.calibration {
+                GeometryReader { geo in
+                    ProjectionOverlay(quad: calibration.quad, target: model.snapshot.target,
+                                      rect: AVFit.rect(aspect: model.demo ? DemoStage.image().size : rtc.videoSize, in: geo.size))
+                }
+            }
             if !fresh {
                 Color.black.opacity(0.7)
                 Text(rtc.lastFrameAt == nil ? "영상 대기 · 스캔 중에는 촬영하지 않습니다" : "영상 갱신 중단 · 마지막 화면")
@@ -208,13 +228,17 @@ struct StageBoundsEditor: View {
     @State private var depth = ""
     @State private var checked = false
     private var size: StageSize { .init(width: Double(width) ?? 0, depth: Double(depth) ?? 0) }
+    private var displaySize: StageSize {
+        .init(width: size.width.isFinite ? min(100, max(0.5, size.width)) : 1,
+              depth: size.depth.isFinite ? min(100, max(0.5, size.depth)) : 1)
+    }
     var body: some View {
         NavigationStack {
             HStack(spacing: 20) {
                 GeometryReader { geo in
-                    let extent = CGSize(width: max(initial.width * 1.5, size.width), height: max(initial.depth * 1.5, size.depth))
+                    let extent = CGSize(width: max(initial.width * 1.5, displaySize.width), height: max(initial.depth * 1.5, displaySize.depth))
                     let outer = AVFit.rect(aspect: extent, in: CGSize(width: geo.size.width - 50, height: geo.size.height - 50)).offsetBy(dx: 25, dy: 25)
-                    let rect = CGRect(x: outer.minX, y: outer.maxY - outer.height * size.depth / extent.height, width: outer.width * size.width / extent.width, height: outer.height * size.depth / extent.height)
+                    let rect = CGRect(x: outer.minX, y: outer.maxY - outer.height * displaySize.depth / extent.height, width: outer.width * displaySize.width / extent.width, height: outer.height * displaySize.depth / extent.height)
                     ZStack(alignment: .topLeading) {
                         Rectangle().fill(.blue.opacity(0.08)).frame(width: rect.width, height: rect.height).position(x: rect.midX, y: rect.midY)
                         Path(rect).stroke(.blue, lineWidth: 3)
@@ -238,8 +262,8 @@ struct StageBoundsEditor: View {
                 }
                 Form {
                     Section(source) {
-                        TextField("가로(m)", text: $width).keyboardType(.decimalPad).accessibilityIdentifier("scan-width")
-                        TextField("세로(m)", text: $depth).keyboardType(.decimalPad).accessibilityIdentifier("scan-depth")
+                        HStack { Text("가로(m)"); TextField("가로", text: $width).keyboardType(.decimalPad).accessibilityIdentifier("scan-width") }
+                        HStack { Text("세로(m)"); TextField("세로", text: $depth).keyboardType(.decimalPad).accessibilityIdentifier("scan-depth") }
                         Button("너비와 깊이 바꾸기") { swap(&width, &depth); checked = false }
                     }
                     Section {

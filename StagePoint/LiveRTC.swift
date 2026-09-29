@@ -26,6 +26,9 @@ final class LiveRTC: NSObject, ObservableObject {
     private var role: DeviceRole = .camera
     private var isCapturing = false
     private var captureGeneration = UUID()
+    #if DEBUG && targetEnvironment(simulator)
+    private var syntheticTimer: Timer?
+    #endif
     private lazy var pulse = FramePulse { [weak self] size in
         self?.lastFrameAt = Date(); self?.videoSize = size
     }
@@ -137,6 +140,9 @@ final class LiveRTC: NSObject, ObservableObject {
             let track = factory.videoTrack(with: source, trackId: "stage-camera")
             localTrack = track; track.add(pulse)
             peer?.add(track, streamIds: ["stage"])
+            #if DEBUG && targetEnvironment(simulator)
+            if LiveTestConfiguration.role == .camera { startSynthetic(source: source) }
+            #endif
             let config = RTCDataChannelConfiguration(); config.isOrdered = true
             channel = peer?.dataChannel(forLabel: "stage-control", configuration: config)
             channel?.delegate = self
@@ -187,6 +193,9 @@ final class LiveRTC: NSObject, ObservableObject {
         }
     }
     func stopCamera(completion: (() -> Void)? = nil) {
+        #if DEBUG && targetEnvironment(simulator)
+        syntheticTimer?.invalidate(); syntheticTimer = nil
+        #endif
         captureGeneration = UUID(); isCapturing = false; lastFrameAt = nil
         guard let capturer else { completion?(); return }
         capturer.stopCapture { DispatchQueue.main.async { completion?() } }
@@ -195,6 +204,21 @@ final class LiveRTC: NSObject, ObservableObject {
         guard dataReady, let channel, channel.bufferedAmount < 128_000, let data = try? packet.encoded() else { return false }
         return channel.sendData(RTCDataBuffer(data: data, isBinary: true))
     }
+    #if DEBUG && targetEnvironment(simulator)
+    private func startSynthetic(source: RTCVideoSource) {
+        let producer = RTCVideoCapturer(delegate: source)
+        var buffer: CVPixelBuffer?
+        CVPixelBufferCreate(kCFAllocatorDefault, 1280, 720, kCVPixelFormatType_32BGRA,
+                            [kCVPixelBufferIOSurfacePropertiesKey: [:]] as CFDictionary, &buffer)
+        guard let buffer, let image = DemoStage.image().cgImage else { return }
+        let ci = CIImage(cgImage: image)
+        CIContext().render(ci.transformed(by: CGAffineTransform(scaleX: 1280 / ci.extent.width, y: 720 / ci.extent.height)), to: buffer)
+        syntheticTimer = Timer.scheduledTimer(withTimeInterval: 0.1, repeats: true) { _ in
+            let frame = RTCVideoFrame(buffer: RTCCVPixelBuffer(pixelBuffer: buffer), rotation: ._0, timeStampNs: Int64(ProcessInfo.processInfo.systemUptime * 1_000_000_000))
+            source.capturer(producer, didCapture: frame)
+        }
+    }
+    #endif
 }
 
 extension LiveRTC: RTCPeerConnectionDelegate {

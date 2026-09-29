@@ -2,6 +2,14 @@ import XCTest
 @testable import StagePointCore
 
 final class LiveStageTests: XCTestCase {
+    func testIndependentProbeAndPhysicalError() throws {
+        let quad = StageQuad.manual
+        let image = try XCTUnwrap(StageMapping(quad: quad)?.imagePoint(from: .init(x: 0.5, y: 0.5)))
+        let sample = try XCTUnwrap(CalibrationProbe(imagePoint: image, measured: .init(x: 4.1, y: 3), quad: quad, size: .init(width: 8, depth: 6)))
+        XCTAssertEqual(sample.errorMeters, 0.1, accuracy: 0.00001)
+        XCTAssertNil(CalibrationProbe(imagePoint: quad.corners[0], measured: .init(x: 0, y: 0), quad: quad, size: .init(width: 8, depth: 6)))
+        XCTAssertNil(CalibrationProbe(imagePoint: image, measured: .init(x: 9, y: 3), quad: quad, size: .init(width: 8, depth: 6)))
+    }
     func testCalibrationRequiresConfirmationAndValidation() {
         var value = LiveSnapshot()
         value.stage = LiveStage(size: .init(width: 8, depth: 6), confirmed: true)

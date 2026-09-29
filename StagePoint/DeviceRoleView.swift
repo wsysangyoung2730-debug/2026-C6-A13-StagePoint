@@ -2,13 +2,13 @@ import SwiftUI
 import StagePointCore
 
 struct DeviceRoleView: View {
-    @State private var role: DeviceRole?
+    @State private var role: DeviceRole? = LiveTestConfiguration.role
     @State private var legacy = false
     var body: some View {
         if legacy {
             VStack(spacing: 0) {
                 Button("기기 역할 선택으로") { legacy = false }.padding(6)
-                ContentView()
+                ContentView().preferredColorScheme(.dark)
             }
         } else if let role {
             LiveWorkspaceView(role: role) { self.role = nil }
