@@ -6,7 +6,7 @@
 ## 작업 브랜치
 
 이전 #5와 동일하게 아래 번호는 로컬 작업 번호이며 GitHub 이슈 번호가 아니다.
-원격 이슈·PR·푸시·main/develop 병합은 이번 로컬 구현에 포함하지 않는다.
+최초 구현은 로컬에서 진행했다. 이후 사용자 요청에 따라 [이슈 #12](https://github.com/wsysangyoung2730-debug/2026-C6-A13-StagePoint/issues/12)를 작성하고 누적 작업 브랜치를 원격에 게시해 develop 대상 PR로 통합한다. main은 변경하지 않는다.
 
 1. `feat/#6-DeviceRoles`: 역할 화면·공유 모델
 2. `feat/#7-LiveVideo`: WebRTC·개발용 시그널링 서버
@@ -122,4 +122,4 @@ UI 테스트는 `--uitesting --live-demo`로 데모 화면에 진입한다. 전�
 - `0b7f7f4`: WebRTC 프레임워크 실행 경로 수정.
 - 후속 커밋: 좁은 화면 운영 패널, 카메라 권한 안내, UI 테스트와 이 실행 기록.
 
-최종 누적 작업 브랜치는 `feat/#9-StageCalibration`이다. 모든 작업은 로컬에 있으며 원격 브랜치와 main/develop은 변경하지 않았다. 검증 로그·화면·xcresult는 무시된 `.artifacts/` 및 `.artifacts-*.log`에 남겼다. 시험용 서버는 검증 종료 후 중지했다.
+최종 누적 작업 브랜치는 `feat/#9-StageCalibration`이다. 최초 완료 시점에는 로컬 커밋만 남겼으며, 후속 원격 통합 결과와 CI 기록은 [이슈 #12](https://github.com/wsysangyoung2730-debug/2026-C6-A13-StagePoint/issues/12)에 기록한다. 실기기 검증이 남아 있으므로 이슈를 자동 종료하지 않는다. 검증 로그·화면·xcresult는 무시된 `.artifacts/` 및 `.artifacts-*.log`에 남겼다. 시험용 서버는 검증 종료 후 중지했다.
