@@ -7,4 +7,4 @@ xcuserdata/
 *.xcuserstate
 *.xcresult
 .artifacts/
-
+node_modules/
